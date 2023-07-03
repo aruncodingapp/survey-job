@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.hrms</groupId>
-	<artifactId>quartzjob</artifactId>
+	<artifactId>survey-quartzjob</artifactId>
 	<version>1</version>
 	<name>quartzjob</name>
 	<description>Demo project for Spring Boot</description>

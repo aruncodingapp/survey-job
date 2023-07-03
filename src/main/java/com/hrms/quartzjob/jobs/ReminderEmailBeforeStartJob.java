@@ -102,7 +102,7 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
                                 surveyMessageEntity.setReminderEmail(
                                         surveyMessageEntity.getReminderEmail().replace("{{QR_Code}}", qrCode));
                                 try {
-                                    saveHistoryAndSendInvitationEmail(user, surveyMessageEntity);
+                                    saveHistoryAndSendReminderEmail(user, surveyMessageEntity);
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
@@ -123,11 +123,11 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
         return "data:image/png;base64, " + base64QRCode;
     }
 
-    private InvitationSendStatus saveHistoryAndSendInvitationEmail(SurveyParticipantEntity user,
+    private InvitationSendStatus saveHistoryAndSendReminderEmail(SurveyParticipantEntity user,
             SurveyMessageEntity template) {
         SurveyInvitationHistoryEntity surveyHistory = new SurveyInvitationHistoryEntity();
-        surveyHistory.setSubject("");
-        surveyHistory.setBody(template.getReminderEmail()+"start wala ");
+        surveyHistory.setSubject(template.getReminderEmailSubject());
+        surveyHistory.setBody(template.getReminderEmail());
         surveyHistory.setStatus(InvitationSendStatus.PENDING);
         surveyHistory.setFailReason("");
         surveyHistory.setEmailTo(user.getEmail());

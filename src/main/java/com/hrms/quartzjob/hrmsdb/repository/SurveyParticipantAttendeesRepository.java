@@ -7,5 +7,6 @@ import com.hrms.quartzjob.hrmsdb.models.SurveyParticipantAttendeesEntity;
 
 public interface SurveyParticipantAttendeesRepository extends JpaRepository<SurveyParticipantAttendeesEntity, Long> {
 
+    SurveyParticipantAttendeesEntity findByParticipantId(long participantId);
        
 }

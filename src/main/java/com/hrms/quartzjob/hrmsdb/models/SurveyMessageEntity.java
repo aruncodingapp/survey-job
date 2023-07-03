@@ -20,15 +20,25 @@ import lombok.Setter;
 @Table(name = "survey_message_template")
 public class SurveyMessageEntity extends BaseEntity{
     
+   
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     @Column(columnDefinition = "text", nullable = false, unique = false)
+    private String invitationEmailSubject;
+
+    @Column(columnDefinition = "text", nullable = false, unique = false)
     private String invitationEmail;
 
     @Column(columnDefinition = "text", nullable = false, unique = false)
+    private String reminderEmailSubject;
+
+    @Column(columnDefinition = "text", nullable = false, unique = false)
     private String reminderEmail;
+
+    @Column(columnDefinition = "text", nullable = false, unique = false)
+    private String thankYouEmailSubject;
 
     @Column(columnDefinition = "text", nullable = false, unique = false)
     private String thankYouEmail;
