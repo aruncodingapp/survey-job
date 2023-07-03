@@ -23,9 +23,9 @@ public class QuartzConfig {
     private DataSource dataSource;
     private QuartzProperties quartzProperties;
 
-     private static final String EVERY_MINUTE = "59 * * ? * * *";
+    //  private static final String EVERY_MINUTE = "59 * * ? * * *";
 
-    // private static final String EVERY_DAY_MIDNIGHT = "0 0 0 * * ?";
+    private static final String EVERY_DAY_MIDNIGHT = "0 0 0 * * ?";
     private static final String EVERY_MONTH_FIRST_DAY_MIDNIGHT = "0 0 0 1 * ? *";
 
     public QuartzConfig(ApplicationContext applicationContext, DataSource dataSource,
@@ -62,7 +62,7 @@ public class QuartzConfig {
         CronTriggerFactoryBean factoryBean = new CronTriggerFactoryBean();
         factoryBean.setJobDetail(Objects.requireNonNull(reminderBeforeStartJob().getObject()));
         factoryBean.setStartDelay(1000);
-        factoryBean.setCronExpression(EVERY_MINUTE);
+        factoryBean.setCronExpression(EVERY_DAY_MIDNIGHT);
         return factoryBean;
 
     }
@@ -83,7 +83,7 @@ public class QuartzConfig {
         CronTriggerFactoryBean factoryBean = new CronTriggerFactoryBean();
         factoryBean.setJobDetail(Objects.requireNonNull(reminderBeforeEndJob().getObject()));
         factoryBean.setStartDelay(1000);
-        factoryBean.setCronExpression(EVERY_MINUTE);
+        factoryBean.setCronExpression(EVERY_DAY_MIDNIGHT);
         return factoryBean;
 
     }
