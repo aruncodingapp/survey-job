@@ -60,6 +60,8 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         System.out.println("---------------------REMINDER EMAIL BEFORE START JOB START----------------------------");
         List<ISurveyDto> existingAllScheduledSurvey = surveyRepository.getAllByScheduled();
+        if(!existingAllScheduledSurvey.isEmpty())
+        {
         for (ISurveyDto survey : existingAllScheduledSurvey) {
             Optional<SurveyEntity> existingSurvey = surveyRepository.findById(survey.getId());
             if (existingSurvey.isPresent() && existingSurvey.get().getIsPublished()) {
@@ -112,6 +114,7 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
         }
         System.out.println("---------------------REMINDER EMAIL BEFORE START JOB END----------------------------");
     }
+}
 
     public String generateQRCode(String url) {
         ByteArrayOutputStream out = QRCode.from(url).to(ImageType.PNG).stream();
