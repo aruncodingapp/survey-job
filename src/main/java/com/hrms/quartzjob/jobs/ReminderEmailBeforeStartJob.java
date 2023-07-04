@@ -60,61 +60,64 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         System.out.println("---------------------REMINDER EMAIL BEFORE START JOB START----------------------------");
         List<ISurveyDto> existingAllScheduledSurvey = surveyRepository.getAllByScheduled();
-        if(!existingAllScheduledSurvey.isEmpty())
-        {
-        for (ISurveyDto survey : existingAllScheduledSurvey) {
-            Optional<SurveyEntity> existingSurvey = surveyRepository.findById(survey.getId());
-            if (existingSurvey.isPresent() && existingSurvey.get().getIsPublished()) {
-                SurveyEntity surveyEntity = existingSurvey.get();
-                Optional<SurveyMessageEntity> surveyMessage = surveyMessageRepository
-                        .findBySurveyId(surveyEntity.getId());
-                Optional<SurveySettingsEntity> existingSurveySettings = settingsRepository
-                        .findBySurveyId(surveyEntity.getId());
-                if (existingSurveySettings.isPresent()) {
-                    SurveySettingsEntity surveySettingsEntity = existingSurveySettings.get();
-                    List<SurveyParticipantEntity> existingUsers = participantRepository
+        if (!existingAllScheduledSurvey.isEmpty()) {
+            for (ISurveyDto survey : existingAllScheduledSurvey) {
+                Optional<SurveyEntity> existingSurvey = surveyRepository.findById(survey.getId());
+                if (existingSurvey.isPresent() && existingSurvey.get().getIsPublished()) {
+                    SurveyEntity surveyEntity = existingSurvey.get();
+                    Optional<SurveyMessageEntity> surveyMessage = surveyMessageRepository
                             .findBySurveyId(surveyEntity.getId());
-                    int surveyStartReminder = surveySettingsEntity.getSurveyStartReminder();
-                    LocalDate startDate = surveySettingsEntity.getStartDate();
-                    LocalDate currentDate = LocalDate.now();
-                    if (currentDate.plusDays(surveyStartReminder).isEqual(startDate)) {
-                        for (SurveyParticipantEntity user : existingUsers) {
-                            if (surveyMessage.isPresent()) {
-                                SurveyMessageEntity surveyMessageEntity = surveyMessage.get();
-                                surveyMessageEntity.setReminderEmail(
-                                        surveyMessageEntity.getReminderEmail().replace("{{name}}", user.getName()));
-                                surveyMessageEntity
-                                        .setReminderEmail(surveyMessageEntity.getReminderEmail().replace("{{URL}}",
-                                                uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/"
-                                                        + user.getUrlKey()));
-                                surveyMessageEntity.setReminderEmail(
-                                        surveyMessageEntity.getReminderEmail().replace("{{start_Date}}",
-                                                surveySettingsEntity.getStartDate() + " At: "
-                                                        + surveySettingsEntity.getStartTime()));
-                                surveyMessageEntity.setReminderEmail(
-                                        surveyMessageEntity.getReminderEmail().replace("{{end_Date}}",
-                                                surveySettingsEntity.getEndDate() + " At: "
-                                                        + surveySettingsEntity.getEndTime()));
-                                String qrCodeUrl = uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey()
-                                        + "/"
-                                        + user.getUrlKey();
-                                String qrCode = generateQRCode(qrCodeUrl);
-                                surveyMessageEntity.setReminderEmail(
-                                        surveyMessageEntity.getReminderEmail().replace("{{QR_Code}}", qrCode));
-                                try {
-                                    saveHistoryAndSendReminderEmail(user, surveyMessageEntity);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
+                    Optional<SurveySettingsEntity> existingSurveySettings = settingsRepository
+                            .findBySurveyId(surveyEntity.getId());
+                    if (existingSurveySettings.isPresent()) {
+                        SurveySettingsEntity surveySettingsEntity = existingSurveySettings.get();
+                        List<SurveyParticipantEntity> existingUsers = participantRepository
+                                .findBySurveyId(surveyEntity.getId());
+                        int surveyStartReminder = surveySettingsEntity.getSurveyStartReminder();
+                        LocalDate startDate = surveySettingsEntity.getStartDate();
+                        LocalDate currentDate = LocalDate.now();
+                        if (currentDate.plusDays(surveyStartReminder).isEqual(startDate)) {
+                            for (SurveyParticipantEntity user : existingUsers) {
+                                if (surveyMessage.isPresent()) {
+                                    SurveyMessageEntity msgEntity = surveyMessage.get();
+                                    SurveyMessageEntity surveyMessageEntity = new SurveyMessageEntity();
+                                    surveyMessageEntity.setReminderEmailSubject(msgEntity.getReminderEmailSubject());
+                                    surveyMessageEntity.setReminderEmail(msgEntity.getReminderEmail());
+                                    surveyMessageEntity.setReminderEmail(
+                                            surveyMessageEntity.getReminderEmail().replace("{{name}}", user.getName()));
+                                    surveyMessageEntity
+                                            .setReminderEmail(surveyMessageEntity.getReminderEmail().replace("{{URL}}",
+                                                    uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey()
+                                                            + "/"
+                                                            + user.getUrlKey()));
+                                    surveyMessageEntity.setReminderEmail(
+                                            surveyMessageEntity.getReminderEmail().replace("{{start_Date}}",
+                                                    surveySettingsEntity.getStartDate() + " At: "
+                                                            + surveySettingsEntity.getStartTime()));
+                                    surveyMessageEntity.setReminderEmail(
+                                            surveyMessageEntity.getReminderEmail().replace("{{end_Date}}",
+                                                    surveySettingsEntity.getEndDate() + " At: "
+                                                            + surveySettingsEntity.getEndTime()));
+                                    String qrCodeUrl = uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey()
+                                            + "/"
+                                            + user.getUrlKey();
+                                    String qrCode = generateQRCode(qrCodeUrl);
+                                    surveyMessageEntity.setReminderEmail(
+                                            surveyMessageEntity.getReminderEmail().replace("{{QR_Code}}", qrCode));
+                                    try {
+                                        saveHistoryAndSendReminderEmail(user, surveyMessageEntity);
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            System.out.println("---------------------REMINDER EMAIL BEFORE START JOB END----------------------------");
         }
-        System.out.println("---------------------REMINDER EMAIL BEFORE START JOB END----------------------------");
     }
-}
 
     public String generateQRCode(String url) {
         ByteArrayOutputStream out = QRCode.from(url).to(ImageType.PNG).stream();

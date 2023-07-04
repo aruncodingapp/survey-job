@@ -79,7 +79,10 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
                         if (currentDate.plusDays(surveyEndReminder).isEqual(endDate)) {
                             for (SurveyParticipantEntity user : existingUsers) {
                                 if (surveyMessage.isPresent()) {
-                                    SurveyMessageEntity surveyMessageEntity = surveyMessage.get();
+                                  SurveyMessageEntity msgEntity = surveyMessage.get();
+                         SurveyMessageEntity surveyMessageEntity = new SurveyMessageEntity();
+                         surveyMessageEntity.setReminderEmailSubject(msgEntity.getReminderEmailSubject());
+                         surveyMessageEntity.setReminderEmail(msgEntity.getReminderEmail());
                                     surveyMessageEntity.setReminderEmail(
                                             surveyMessageEntity.getReminderEmail().replace("{{name}}",
                                                     user.getName()));
