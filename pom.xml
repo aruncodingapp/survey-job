@@ -88,6 +88,81 @@
 				</configuration>
 			</plugin>
 		</plugins>
-	</build>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.codehaus.mojo
+										</groupId>
+										<artifactId>
+											exec-maven-plugin
+										</artifactId>
+										<versionRange>
+											[1.6.0,)
+										</versionRange>
+										<goals>
+											<goal>exec</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>com.garethevans.plugin</groupId>
+					<artifactId>swagger-codegen-maven-plugin</artifactId>
+					<version>${project.version}</version>
+					<executions>
+						<execution>
+							<goals>
+								<goal>generate</goal>
+							</goals>
+							<configuration>
+								<inputSpec>src/main/resources/api.yaml</inputSpec>
+								<language>java</language>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.wildfly.plugins</groupId>
+					<artifactId>wildfly-maven-plugin</artifactId>
+					<version>1.1.0.Alpha10</version>
+					<executions>
+						<execution>
+							<phase>install</phase>
+							<goals>
+								<goal>redeploy</goal>
+							</goals>
+						</execution>
+					</executions>
+					<configuration>
+						<force>true</force>
+						<hostname>${hostname}</hostname>
+						<port>${port}</port>
+						<username>${username}</username>
+						<password>${password}</password>
+						<filename>${filename}</filename>
+					</configuration>
+				</plugin>
 
+			</plugins>
+		</pluginManagement>
+		
+	</build>
+<packaging>war</packaging>
 </project>
