@@ -5,17 +5,17 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
-import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.SchedulerException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.hrms.quartzjob.config.URLRepository;
 import com.hrms.quartzjob.hrmsdb.enums.InvitationSendStatus;
 import com.hrms.quartzjob.hrmsdb.models.SurveyEntity;
 import com.hrms.quartzjob.hrmsdb.models.SurveyInvitationHistoryEntity;
@@ -23,6 +23,7 @@ import com.hrms.quartzjob.hrmsdb.models.SurveyMessageEntity;
 import com.hrms.quartzjob.hrmsdb.models.SurveyParticipantEntity;
 import com.hrms.quartzjob.hrmsdb.models.SurveySettingsEntity;
 import com.hrms.quartzjob.hrmsdb.models.service.EmailService;
+import com.hrms.quartzjob.hrmsdb.models.service.RestApi;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyInvitationHistoryRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyMessageRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyParticipantRepository;
@@ -35,6 +36,7 @@ import net.glxn.qrgen.javase.QRCode;
 @Component
 public class SendInvitationJob extends QuartzJobBean {
 
+    String authToken;
 
     private SurveyMessageRepository surveyMessageRepository;
 
@@ -96,6 +98,12 @@ public class SendInvitationJob extends QuartzJobBean {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        try {
+            authToken = (String) context.getScheduler().getContext().get("auth_token");
+        } catch (SchedulerException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
         long number = dataMap.getLong("number");
         Optional<SurveyEntity> existingSurveyEntity = this.surveyRepository.findById(number);
         if (existingSurveyEntity.isPresent()) {
@@ -127,6 +135,11 @@ public class SendInvitationJob extends QuartzJobBean {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+                    try{
+                        sendWhatsAppNotification(user,surveyEntity);
+                    } catch(Exception e) {
+                        e.printStackTrace();
+                    }    
                 }
             }
             }
@@ -158,5 +171,38 @@ public class SendInvitationJob extends QuartzJobBean {
         return surveyHistory.getStatus();
     }
 
+    private void  sendWhatsAppNotification(SurveyParticipantEntity user,SurveyEntity surveyEntity) {
+    RestApi restApi = new RestApi();
+    String baseUrl = URLRepository.whatsAppUrl;
+
+    JsonObject parameter = new JsonObject();
+        parameter.addProperty("type", "text");
+        parameter.addProperty("text", uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/" + user.getUrlKey());
+
+        JsonArray components = new JsonArray();
+        JsonObject bodyComponent = new JsonObject();
+        bodyComponent.addProperty("type", "body");
+        JsonArray parametersArray = new JsonArray();
+        parametersArray.add(parameter);
+        bodyComponent.add("parameters", parametersArray);
+        components.add(bodyComponent);
+
+        JsonObject languageObject = new JsonObject();
+        languageObject.addProperty("code", "en_GB");
+
+        JsonObject templateObject = new JsonObject();
+        templateObject.addProperty("name", "survey_invitation");
+        templateObject.add("language", languageObject);
+        templateObject.add("components", components);
+
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("messaging_product", "whatsapp");
+        jsonObject.addProperty("recipient_type", "individual");
+        jsonObject.addProperty("to", user.getMobile());
+        jsonObject.addProperty("type", "template");
+        jsonObject.add("template", templateObject);
+
+    restApi.whatsAppSendNotification(baseUrl, jsonObject, HttpMethod.POST, authToken);
+    }
    
 }
