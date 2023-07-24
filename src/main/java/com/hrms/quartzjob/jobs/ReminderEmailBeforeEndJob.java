@@ -10,8 +10,11 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
+import com.google.gson.JsonObject;
+import com.hrms.quartzjob.config.URLRepository;
 import com.hrms.quartzjob.hrmsdb.enums.InvitationSendStatus;
 import com.hrms.quartzjob.hrmsdb.models.ISurveyDto;
 import com.hrms.quartzjob.hrmsdb.models.SurveyEntity;
@@ -21,6 +24,7 @@ import com.hrms.quartzjob.hrmsdb.models.SurveyParticipantAttendeesEntity;
 import com.hrms.quartzjob.hrmsdb.models.SurveyParticipantEntity;
 import com.hrms.quartzjob.hrmsdb.models.SurveySettingsEntity;
 import com.hrms.quartzjob.hrmsdb.models.service.EmailService;
+import com.hrms.quartzjob.hrmsdb.models.service.RestApi;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyInvitationHistoryRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyMessageRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyParticipantAttendeesRepository;
@@ -55,6 +59,9 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
 
     @Value("${survey.ui.domain}")
     String uiDomain;
+
+    @Value ("${survey.authToken}")
+    String authToken;
 
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
@@ -112,6 +119,11 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
+                                    try{
+                                            sendWhatsAppNotification(user);
+                                        } catch(Exception e) {
+                                            e.printStackTrace();
+                                    }
                                 }
                             }
 
@@ -150,5 +162,27 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
         user.setEmailInvitationSent(true);
         participantRepository.save(user);
         return surveyHistory.getStatus();
+    }
+
+    private void  sendWhatsAppNotification(SurveyParticipantEntity user) {
+    RestApi restApi = new RestApi();
+    String baseUrl = URLRepository.whatsAppUrl;
+
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.addProperty("messaging_product", "whatsapp");
+    jsonObject.addProperty("recipient_type", "individual");
+    jsonObject.addProperty("to",user.getMobile());
+    jsonObject.addProperty("type", "template");
+
+    JsonObject templateObject = new JsonObject();
+    templateObject.addProperty("name", "survey_reminder");
+
+    JsonObject languageObject = new JsonObject();
+    languageObject.addProperty("code", "en_GB");
+
+    templateObject.add("language", languageObject);
+    jsonObject.add("template", templateObject);
+
+    restApi.whatsAppSendNotification(baseUrl, jsonObject, HttpMethod.POST, authToken);
     }
 }
