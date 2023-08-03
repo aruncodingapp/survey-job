@@ -22,7 +22,7 @@ public class SurveyEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
-    @Column(columnDefinition = "VARCHAR(250)", nullable = false)
+    @Column(columnDefinition = "NVARCHAR(250)", nullable = false)
     private String name;
     @Column(columnDefinition = "boolean default false") 
     private Boolean isPublished;
