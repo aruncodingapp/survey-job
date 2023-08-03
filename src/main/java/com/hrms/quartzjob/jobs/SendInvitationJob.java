@@ -50,9 +50,9 @@ public class SendInvitationJob extends QuartzJobBean {
 
     private SurveyRepository surveyRepository;
 
-    
     String uiDomain;
- @Override
+
+    @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         System.out.println("---------------------Invitation EMAIL JOB START----------------------------");
         JobDataMap dataMap = context.getJobDetail().getJobDataMap();
@@ -69,13 +69,15 @@ public class SendInvitationJob extends QuartzJobBean {
             e.printStackTrace();
         }
         try {
-            participantRepository = (SurveyParticipantRepository) context.getScheduler().getContext().get("participant_repo");
+            participantRepository = (SurveyParticipantRepository) context.getScheduler().getContext()
+                    .get("participant_repo");
         } catch (SchedulerException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
         try {
-            invitationHistoryRepository = (SurveyInvitationHistoryRepository) context.getScheduler().getContext().get("invitationHistory_repo");
+            invitationHistoryRepository = (SurveyInvitationHistoryRepository) context.getScheduler().getContext()
+                    .get("invitationHistory_repo");
         } catch (SchedulerException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -114,34 +116,37 @@ public class SendInvitationJob extends QuartzJobBean {
             SurveySettingsEntity surveySettingsEntity = existingSurveySettings.get();
             if (existingSurveySettings.isPresent()) {
                 for (SurveyParticipantEntity user : existingParticipants) {
-                    if(existingSurveyMessage.isPresent())
-                    {
-                         SurveyMessageEntity msgEntity = existingSurveyMessage.get();
-                         SurveyMessageEntity surveyMessageEntity = new SurveyMessageEntity();
-                         surveyMessageEntity.setInvitationEmailSubject(msgEntity.getInvitationEmailSubject());
-                         surveyMessageEntity.setInvitationEmail(msgEntity.getInvitationEmail());
-                    surveyMessageEntity.setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace("{{name}}", user.getName()));
-                    surveyMessageEntity.setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace("{{URL}}",
-                            uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/" + user.getUrlKey()));
-                    surveyMessageEntity.setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace("{{start_Date}}",
-                            surveySettingsEntity.getStartDate() + " At: " + surveySettingsEntity.getStartTime()));
-                    surveyMessageEntity.setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace("{{end_Date}}",
-                            surveySettingsEntity.getEndDate() + " At: " + surveySettingsEntity.getEndTime()));
-                    String qrCodeUrl = uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/" + user.getUrlKey();
-                    String qrCode = generateQRCode(qrCodeUrl);
-                    surveyMessageEntity.setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace("{{QR_Code}}", qrCode));
-                    try {
-                        saveHistoryAndSendInvitationEmail(user, surveyMessageEntity);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                    if (existingSurveyMessage.isPresent()) {
+                        SurveyMessageEntity msgEntity = existingSurveyMessage.get();
+                        SurveyMessageEntity surveyMessageEntity = new SurveyMessageEntity();
+                        surveyMessageEntity.setSurveyId(surveyEntity.getId());
+                        surveyMessageEntity.setInvitationEmailSubject(msgEntity.getInvitationEmailSubject());
+                        surveyMessageEntity.setInvitationEmail(msgEntity.getInvitationEmail());
+                        surveyMessageEntity.setInvitationEmail(
+                                surveyMessageEntity.getInvitationEmail().replace("{{name}}", user.getName()));
+                        surveyMessageEntity
+                                .setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace("{{URL}}",
+                                        uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/"
+                                                + user.getUrlKey()));
+                        surveyMessageEntity.setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace(
+                                "{{start_Date}}",
+                                surveySettingsEntity.getStartDate() + " At: " + surveySettingsEntity.getStartTime()));
+                        surveyMessageEntity.setInvitationEmail(surveyMessageEntity.getInvitationEmail().replace(
+                                "{{end_Date}}",
+                                surveySettingsEntity.getEndDate() + " At: " + surveySettingsEntity.getEndTime()));
+                        String qrCodeUrl = uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/"
+                                + user.getUrlKey();
+                        String qrCode = generateQRCode(qrCodeUrl);
+                        surveyMessageEntity.setInvitationEmail(
+                                surveyMessageEntity.getInvitationEmail().replace("{{QR_Code}}", qrCode));
+                        try {
+                            saveHistoryAndSendInvitationEmail(user, surveyMessageEntity, surveyEntity);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                       
                     }
-                    try{
-                        sendWhatsAppNotification(user,surveyEntity);
-                    } catch(Exception e) {
-                        e.printStackTrace();
-                    }    
                 }
-            }
             }
         }
         System.out.println("---------------------Invitation EMAIL JOB END----------------------------");
@@ -155,7 +160,7 @@ public class SendInvitationJob extends QuartzJobBean {
     }
 
     private InvitationSendStatus saveHistoryAndSendInvitationEmail(SurveyParticipantEntity user,
-            SurveyMessageEntity template) {
+            SurveyMessageEntity template, SurveyEntity surveyEntity) {
 
         SurveyInvitationHistoryEntity surveyHistory = new SurveyInvitationHistoryEntity();
         surveyHistory.setSubject(template.getInvitationEmailSubject());
@@ -163,21 +168,31 @@ public class SendInvitationJob extends QuartzJobBean {
         surveyHistory.setStatus(InvitationSendStatus.PENDING);
         surveyHistory.setFailReason("");
         surveyHistory.setEmailTo(user.getEmail());
-        invitationHistoryRepository.save(surveyHistory);
-        surveyHistory = emailService.sendEmail(surveyHistory);
-        invitationHistoryRepository.save(surveyHistory);
-        user.setEmailInvitationSent(true);
-        participantRepository.save(user);
+        surveyHistory.setSurveyId(template.getSurveyId());
+        List<SurveyInvitationHistoryEntity> alreadySentMail = this.invitationHistoryRepository
+                .findBySurveyId(template.getSurveyId());
+
+        boolean isUserEmailSent = alreadySentMail.stream()
+                .anyMatch(history -> history.getEmailTo().equals(user.getEmail()));
+        if (!isUserEmailSent) {
+            invitationHistoryRepository.save(surveyHistory);
+            sendWhatsAppNotification(user, surveyEntity);
+            surveyHistory = emailService.sendEmail(surveyHistory);
+            invitationHistoryRepository.save(surveyHistory);
+            user.setEmailInvitationSent(true);
+            participantRepository.save(user);
+        }
         return surveyHistory.getStatus();
     }
 
-    private void  sendWhatsAppNotification(SurveyParticipantEntity user,SurveyEntity surveyEntity) {
-    RestApi restApi = new RestApi();
-    String baseUrl = URLRepository.whatsAppUrl;
+    private void sendWhatsAppNotification(SurveyParticipantEntity user, SurveyEntity surveyEntity) {
+        RestApi restApi = new RestApi();
+        String baseUrl = URLRepository.whatsAppUrl;
 
-    JsonObject parameter = new JsonObject();
+        JsonObject parameter = new JsonObject();
         parameter.addProperty("type", "text");
-        parameter.addProperty("text", uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/" + user.getUrlKey());
+        parameter.addProperty("text",
+                uiDomain + "/app/company-app/survey/" + surveyEntity.getUrlKey() + "/" + user.getUrlKey());
 
         JsonArray components = new JsonArray();
         JsonObject bodyComponent = new JsonObject();
@@ -201,8 +216,8 @@ public class SendInvitationJob extends QuartzJobBean {
         jsonObject.addProperty("to", user.getMobile());
         jsonObject.addProperty("type", "template");
         jsonObject.add("template", templateObject);
-
-    restApi.whatsAppSendNotification(baseUrl, jsonObject, HttpMethod.POST, authToken);
+        
+            restApi.whatsAppSendNotification(baseUrl, jsonObject, HttpMethod.POST, authToken);
     }
-   
+
 }
