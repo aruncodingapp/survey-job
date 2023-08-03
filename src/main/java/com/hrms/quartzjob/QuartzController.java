@@ -47,6 +47,9 @@ public class QuartzController {
     @Value("${survey.ui.domain}")
     String uiDomain;
 
+    @Value ("${survey.authToken}")
+    String authToken;
+
     public QuartzController() throws SchedulerException {
         scheduler = new StdSchedulerFactory().getScheduler();
 
@@ -74,6 +77,7 @@ public class QuartzController {
         scheduler.getContext().put("participant_repo", participantRepository);
         scheduler.getContext().put("settings_repo", settingsRepository);
         scheduler.getContext().put("ui_domain_key", uiDomain);
+        scheduler.getContext().put("auth_token", authToken);
         scheduler.scheduleJob(jobDetail, trigger);
     }
 }

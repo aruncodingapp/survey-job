@@ -49,4 +49,5 @@ public class SurveyInvitationHistoryEntity {
     @Column(columnDefinition = "VARCHAR(500)", nullable = true)
     private String failReason;
 
+    private long surveyId;
 }
