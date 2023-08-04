@@ -138,12 +138,6 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
     private InvitationSendStatus saveHistoryAndSendReminderEmail(SurveyParticipantEntity user,
             SurveyMessageEntity template) {
         SurveyInvitationHistoryEntity surveyHistory = new SurveyInvitationHistoryEntity();
-        List<SurveyInvitationHistoryEntity> alreadySentMail = this.invitationHistoryRepository
-                .findBySurveyId(template.getSurveyId());
-        boolean isUserEmailSent = alreadySentMail.stream()
-                .anyMatch(history -> history.getEmailTo().equals(user.getEmail()));
-
-        if (!isUserEmailSent) {
             surveyHistory.setSubject(template.getReminderStartEmailSubject());
             surveyHistory.setBody(template.getReminderStartEmail());
             surveyHistory.setStatus(InvitationSendStatus.PENDING);
@@ -156,7 +150,6 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
             invitationHistoryRepository.save(surveyHistory);
             user.setEmailInvitationSent(true);
             participantRepository.save(user);
-        }
         return surveyHistory.getStatus();
     }
 
