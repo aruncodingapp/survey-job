@@ -150,7 +150,7 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
         surveyHistory.setEmailTo(user.getEmail());
         surveyHistory.setSurveyId(template.getSurveyId());
         SurveyParticipantAttendeesEntity participantAttendee = this.participantAttendeesRepository
-                .findByParticipantId(template.getId());
+                .findByParticipantId(user.getId());
         boolean shouldSendEmail = (participantAttendee == null) || !participantAttendee.getIsSubmitted();
 
         if (shouldSendEmail) {
