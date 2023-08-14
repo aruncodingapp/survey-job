@@ -63,6 +63,8 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
     @Value("${survey.authToken}")
     String authToken;
 
+    String qrCodeAttachment;
+
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         System.out.println("---------------------REMINDER EMAIL BEFORE END JOB START----------------------------");
@@ -113,7 +115,7 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
                                             + surveyEntity.getUrlKey()
                                             + "/"
                                             + user.getUrlKey();
-                                    String qrCode = generateQRCode(qrCodeUrl);
+                                     String qrCode = generateQRCode(qrCodeUrl);
                                     surveyMessageEntity.setReminderEndEmail(
                                             surveyMessageEntity.getReminderEndEmail().replace("{{QR_Code}}", qrCode));
                                     try {
@@ -136,6 +138,7 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
         ByteArrayOutputStream out = QRCode.from(url).to(ImageType.PNG).stream();
         byte[] qrCodeBytes = out.toByteArray();
         String base64QRCode = Base64.getEncoder().encodeToString(qrCodeBytes);
+        qrCodeAttachment = base64QRCode;
         return "data:image/png;base64, " + base64QRCode;
     }
 
@@ -156,7 +159,11 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
         if (shouldSendEmail) {
             sendWhatsAppNotification(user);
             invitationHistoryRepository.save(surveyHistory);
-            surveyHistory = emailService.sendEmail(surveyHistory);
+            if (user.getEmail().endsWith("@gmail.com")) {
+                surveyHistory = emailService.sendEmailWithAttachment(surveyHistory, qrCodeAttachment);
+            } else {
+                surveyHistory = emailService.sendEmail(surveyHistory);
+            }
             invitationHistoryRepository.save(surveyHistory);
         }
         user.setEmailInvitationSent(true);

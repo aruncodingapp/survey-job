@@ -61,6 +61,8 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
     @Value("${survey.authToken}")
     String authToken;
 
+    String qrCodeAttachment;
+
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         System.out.println("---------------------REMINDER EMAIL BEFORE START JOB START----------------------------");
@@ -132,35 +134,40 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
         ByteArrayOutputStream out = QRCode.from(url).to(ImageType.PNG).stream();
         byte[] qrCodeBytes = out.toByteArray();
         String base64QRCode = Base64.getEncoder().encodeToString(qrCodeBytes);
+        qrCodeAttachment = base64QRCode;
         return "data:image/png;base64, " + base64QRCode;
     }
 
     private InvitationSendStatus saveHistoryAndSendReminderEmail(SurveyParticipantEntity user,
             SurveyMessageEntity template) {
         SurveyInvitationHistoryEntity surveyHistory = new SurveyInvitationHistoryEntity();
-            surveyHistory.setSubject(template.getReminderStartEmailSubject());
-            surveyHistory.setBody(template.getReminderStartEmail());
-            surveyHistory.setStatus(InvitationSendStatus.PENDING);
-            surveyHistory.setFailReason("");
-            surveyHistory.setEmailTo(user.getEmail());
-            surveyHistory.setSurveyId(template.getSurveyId());
-            sendWhatsAppNotification(user);
-            invitationHistoryRepository.save(surveyHistory);
+        surveyHistory.setSubject(template.getReminderStartEmailSubject());
+        surveyHistory.setBody(template.getReminderStartEmail());
+        surveyHistory.setStatus(InvitationSendStatus.PENDING);
+        surveyHistory.setFailReason("");
+        surveyHistory.setEmailTo(user.getEmail());
+        surveyHistory.setSurveyId(template.getSurveyId());
+        sendWhatsAppNotification(user);
+        invitationHistoryRepository.save(surveyHistory);
+        if (user.getEmail().endsWith("@gmail.com")) {
+            surveyHistory = emailService.sendEmailWithAttachment(surveyHistory, qrCodeAttachment);
+        } else {
             surveyHistory = emailService.sendEmail(surveyHistory);
-            invitationHistoryRepository.save(surveyHistory);
-            user.setEmailInvitationSent(true);
-            participantRepository.save(user);
+        }
+        invitationHistoryRepository.save(surveyHistory);
+        user.setEmailInvitationSent(true);
+        participantRepository.save(user);
         return surveyHistory.getStatus();
     }
 
-    private void  sendWhatsAppNotification(SurveyParticipantEntity user) {
+    private void sendWhatsAppNotification(SurveyParticipantEntity user) {
         RestApi restApi = new RestApi();
         String baseUrl = URLRepository.whatsAppUrl;
 
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("messaging_product", "whatsapp");
         jsonObject.addProperty("recipient_type", "individual");
-        jsonObject.addProperty("to",user.getMobile());
+        jsonObject.addProperty("to", user.getMobile());
         jsonObject.addProperty("type", "template");
 
         JsonObject templateObject = new JsonObject();
