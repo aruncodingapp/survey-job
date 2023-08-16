@@ -52,6 +52,8 @@ public class SendInvitationJob extends QuartzJobBean {
 
     String uiDomain;
 
+    String qrCodeAttachment;
+
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         System.out.println("---------------------Invitation EMAIL JOB START----------------------------");
@@ -144,7 +146,7 @@ public class SendInvitationJob extends QuartzJobBean {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-                       
+
                     }
                 }
             }
@@ -156,6 +158,7 @@ public class SendInvitationJob extends QuartzJobBean {
         ByteArrayOutputStream out = QRCode.from(url).to(ImageType.PNG).stream();
         byte[] qrCodeBytes = out.toByteArray();
         String base64QRCode = Base64.getEncoder().encodeToString(qrCodeBytes);
+        qrCodeAttachment = base64QRCode;
         return "data:image/png;base64, " + base64QRCode;
     }
 
@@ -177,7 +180,11 @@ public class SendInvitationJob extends QuartzJobBean {
         if (!isUserEmailSent) {
             invitationHistoryRepository.save(surveyHistory);
             sendWhatsAppNotification(user, surveyEntity);
-            surveyHistory = emailService.sendEmail(surveyHistory);
+            if (user.getEmail().endsWith("@gmail.com")) {
+                surveyHistory = emailService.sendEmailWithAttachment(surveyHistory, qrCodeAttachment);
+            } else {
+                surveyHistory = emailService.sendEmail(surveyHistory);
+            }
             invitationHistoryRepository.save(surveyHistory);
             user.setEmailInvitationSent(true);
             participantRepository.save(user);
@@ -216,8 +223,8 @@ public class SendInvitationJob extends QuartzJobBean {
         jsonObject.addProperty("to", user.getMobile());
         jsonObject.addProperty("type", "template");
         jsonObject.add("template", templateObject);
-        
-            restApi.whatsAppSendNotification(baseUrl, jsonObject, HttpMethod.POST, authToken);
+
+        restApi.whatsAppSendNotification(baseUrl, jsonObject, HttpMethod.POST, authToken);
     }
 
 }
