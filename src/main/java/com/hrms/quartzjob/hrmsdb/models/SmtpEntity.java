@@ -58,4 +58,6 @@ public class SmtpEntity {
     @Column(nullable = true)
     long modifiedBy;
 
+    @Column(columnDefinition = "NVARCHAR(500)", nullable = true)
+    private String whatsAppKey;
 }
