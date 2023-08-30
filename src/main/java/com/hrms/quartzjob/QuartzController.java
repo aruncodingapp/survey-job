@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hrms.quartzjob.hrmsdb.models.service.EmailService;
+import com.hrms.quartzjob.hrmsdb.models.service.WhatsAppService;
+import com.hrms.quartzjob.hrmsdb.repository.SmtpRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyInvitationHistoryRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyMessageRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyParticipantRepository;
@@ -44,11 +46,14 @@ public class QuartzController {
     @Autowired
     private SurveySettingsRepository settingsRepository;
 
+    @Autowired 
+    private SmtpRepository smtpRepository;
+
+    @Autowired
+    private WhatsAppService whatsAppService;
+
     @Value("${survey.ui.domain}")
     String uiDomain;
-
-    @Value ("${survey.authToken}")
-    String authToken;
 
     public QuartzController() throws SchedulerException {
         scheduler = new StdSchedulerFactory().getScheduler();
@@ -61,6 +66,8 @@ public class QuartzController {
         JobDataMap dataMap = new JobDataMap();
         dataMap.put("number", number);
 
+        String authToken = smtpRepository.findWhatsAppKey();
+
         JobDetail jobDetail = JobBuilder.newJob(SendInvitationJob.class)
                 .withIdentity("myJob_" + System.currentTimeMillis(), "group1")
                 .usingJobData(dataMap)
@@ -71,6 +78,8 @@ public class QuartzController {
                 .startNow()
                 .build();
         scheduler.getContext().put("survey_repo", surveyRepository);
+        scheduler.getContext().put("smtp_repo", smtpRepository);
+        scheduler.getContext().put("whatsapp_service", whatsAppService);
         scheduler.getContext().put("msg_repo", surveyMessageRepository);
         scheduler.getContext().put("email_service", emailService);
         scheduler.getContext().put("invitationHistory_repo", invitationHistoryRepository);

@@ -25,6 +25,7 @@ import com.hrms.quartzjob.hrmsdb.models.SurveyParticipantEntity;
 import com.hrms.quartzjob.hrmsdb.models.SurveySettingsEntity;
 import com.hrms.quartzjob.hrmsdb.models.service.EmailService;
 import com.hrms.quartzjob.hrmsdb.models.service.RestApi;
+import com.hrms.quartzjob.hrmsdb.repository.SmtpRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyInvitationHistoryRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyMessageRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyParticipantAttendeesRepository;
@@ -57,11 +58,13 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
     @Autowired
     private SurveyParticipantAttendeesRepository participantAttendeesRepository;
 
+    @Autowired SmtpRepository smtpRepository;
+
     @Value("${survey.ui.domain}")
     String uiDomain;
 
-    @Value("${survey.authToken}")
-    String authToken;
+
+    String authToken = smtpRepository.findWhatsAppKey();
 
     String qrCodeAttachment;
 
