@@ -13,4 +13,7 @@ public interface SmtpRepository extends CrudRepository<SmtpEntity, Long> {
 
     @Query("SELECT s FROM SmtpEntity s")
     public SmtpEntity findDefault();
+
+    @Query(value="select s.whats_app_key from smtp s",nativeQuery = true)
+    String findWhatsAppKey();
 }
