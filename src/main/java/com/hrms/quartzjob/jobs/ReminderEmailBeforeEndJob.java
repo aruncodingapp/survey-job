@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ import com.hrms.quartzjob.hrmsdb.repository.SurveySettingsRepository;
 import net.glxn.qrgen.core.image.ImageType;
 import net.glxn.qrgen.javase.QRCode;
 
+@DisallowConcurrentExecution
 public class ReminderEmailBeforeEndJob extends QuartzJobBean {
     @Autowired
     private SurveyMessageRepository surveyMessageRepository;
@@ -58,13 +60,13 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
     @Autowired
     private SurveyParticipantAttendeesRepository participantAttendeesRepository;
 
-    @Autowired SmtpRepository smtpRepository;
+    @Autowired 
+    private SmtpRepository smtpRepository;
 
     @Value("${survey.ui.domain}")
     String uiDomain;
 
 
-    String authToken = smtpRepository.findWhatsAppKey();
 
     String qrCodeAttachment;
 
@@ -177,6 +179,7 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
     private void  sendWhatsAppNotification(SurveyParticipantEntity user) {
         RestApi restApi = new RestApi();
         String baseUrl = URLRepository.whatsAppUrl;
+        String authToken = smtpRepository.findWhatsAppKey();
 
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("messaging_product", "whatsapp");

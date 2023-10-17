@@ -56,13 +56,10 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
     @Autowired
     private SurveyRepository surveyRepository;
 
-    @Autowired SmtpRepository smtpRepository;
+    @Autowired private SmtpRepository smtpRepository;
 
     @Value("${survey.ui.domain}")
     String uiDomain;
-
-    String authToken = smtpRepository.findWhatsAppKey();
-
 
     String qrCodeAttachment;
 
@@ -166,6 +163,7 @@ public class ReminderEmailBeforeStartJob extends QuartzJobBean {
     private void sendWhatsAppNotification(SurveyParticipantEntity user) {
         RestApi restApi = new RestApi();
         String baseUrl = URLRepository.whatsAppUrl;
+        String authToken= smtpRepository.findWhatsAppKey();
 
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("messaging_product", "whatsapp");
