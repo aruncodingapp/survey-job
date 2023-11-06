@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ import com.hrms.quartzjob.hrmsdb.models.SurveyParticipantEntity;
 import com.hrms.quartzjob.hrmsdb.models.SurveySettingsEntity;
 import com.hrms.quartzjob.hrmsdb.models.service.EmailService;
 import com.hrms.quartzjob.hrmsdb.models.service.RestApi;
+import com.hrms.quartzjob.hrmsdb.repository.JobLogRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SmtpRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyInvitationHistoryRepository;
 import com.hrms.quartzjob.hrmsdb.repository.SurveyMessageRepository;
@@ -36,6 +38,7 @@ import com.hrms.quartzjob.hrmsdb.repository.SurveySettingsRepository;
 import net.glxn.qrgen.core.image.ImageType;
 import net.glxn.qrgen.javase.QRCode;
 
+@DisallowConcurrentExecution
 public class ReminderEmailBeforeEndJob extends QuartzJobBean {
     @Autowired
     private SurveyMessageRepository surveyMessageRepository;
@@ -58,30 +61,34 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
     @Autowired
     private SurveyParticipantAttendeesRepository participantAttendeesRepository;
 
-    @Autowired SmtpRepository smtpRepository;
+    @Autowired 
+    private SmtpRepository smtpRepository;
 
     @Value("${survey.ui.domain}")
     String uiDomain;
 
-
-    String authToken = smtpRepository.findWhatsAppKey();
+    @Autowired private JobLogRepository jobLogRepository;
+    private final String name = "Reminder Mail Before End Job";
 
     String qrCodeAttachment;
 
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         System.out.println("---------------------REMINDER EMAIL BEFORE END JOB START----------------------------");
+        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END JOB START");
         List<ISurveyDto> existingAllActiveSurvey = surveyRepository.getAllByActive();
         if (!existingAllActiveSurvey.isEmpty()) {
             for (ISurveyDto survey : existingAllActiveSurvey) {
                 Optional<SurveyEntity> existingSurvey = surveyRepository.findById(survey.getId());
                 if (existingSurvey.isPresent() && existingSurvey.get().getIsPublished()) {
+                    jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey is Present & its published");
                     SurveyEntity surveyEntity = existingSurvey.get();
                     Optional<SurveyMessageEntity> surveyMessage = surveyMessageRepository
                             .findBySurveyId(surveyEntity.getId());
                     Optional<SurveySettingsEntity> existingSurveySettings = settingsRepository
                             .findBySurveyId(surveyEntity.getId());
                     if (existingSurveySettings.isPresent()) {
+                        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Existing Survey is Present");
                         SurveySettingsEntity surveySettingsEntity = existingSurveySettings.get();
                         List<SurveyParticipantEntity> existingUsers = participantRepository
                                 .findBySurveyId(surveyEntity.getId());
@@ -89,8 +96,11 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
                         LocalDate endDate = surveySettingsEntity.getEndDate();
                         LocalDate currentDate = LocalDate.now();
                         if (currentDate.plusDays(surveyEndReminder).isEqual(endDate)) {
+                            jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END:Survey end date less then current Date");
                             for (SurveyParticipantEntity user : existingUsers) {
+                                jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey ExistingUser");
                                 if (surveyMessage.isPresent()) {
+                                    jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Message Present");
                                     SurveyMessageEntity msgEntity = surveyMessage.get();
                                     SurveyMessageEntity surveyMessageEntity = new SurveyMessageEntity();
                                     surveyMessageEntity.setSurveyId(surveyEntity.getId());
@@ -123,8 +133,10 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
                                             surveyMessageEntity.getReminderEndEmail().replace("{{QR_Code}}", qrCode));
                                     try {
                                         saveHistoryAndSendReminderEmail(user, surveyMessageEntity);
+                                        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Reminder Send Successfully");
                                     } catch (Exception e) {
                                         e.printStackTrace();
+                                        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Reminder Failed"+e.getMessage());
                                     }
                                 }
                             }
@@ -133,6 +145,7 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
                     }
                 }
             }
+            jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END JOB END");
             System.out.println("---------------------REMINDER EMAIL BEFORE END JOB END----------------------------");
         }
     }
@@ -147,6 +160,7 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
 
     private InvitationSendStatus saveHistoryAndSendReminderEmail(SurveyParticipantEntity user,
             SurveyMessageEntity template) {
+        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Email Reminder Start");
         SurveyInvitationHistoryEntity surveyHistory = new SurveyInvitationHistoryEntity();
         surveyHistory.setSubject(template.getReminderEndEmailSubject());
         surveyHistory.setBody(template.getReminderEndEmail());
@@ -161,6 +175,7 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
 
         if (shouldSendEmail) {
             sendWhatsAppNotification(user);
+            jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Email Reminder Sending to..."+user.getEmail());
             invitationHistoryRepository.save(surveyHistory);
             if (user.getEmail().endsWith("@gmail.com")) {
                 surveyHistory = emailService.sendEmailWithAttachment(surveyHistory, qrCodeAttachment);
@@ -169,14 +184,18 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
             }
             invitationHistoryRepository.save(surveyHistory);
         }
+        System.out.println("...Reminder Email Sent to ..."+user.getEmail()+"successfully");
+        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Email Reminder Send to..."+user.getEmail()+" successfully");
         user.setEmailInvitationSent(true);
         participantRepository.save(user);
         return surveyHistory.getStatus();
     }
 
     private void  sendWhatsAppNotification(SurveyParticipantEntity user) {
+        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Whats App Reminder Triggered");
         RestApi restApi = new RestApi();
         String baseUrl = URLRepository.whatsAppUrl;
+        String authToken = smtpRepository.findWhatsAppKey();
 
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("messaging_product", "whatsapp");
@@ -193,6 +212,8 @@ public class ReminderEmailBeforeEndJob extends QuartzJobBean {
         templateObject.add("language", languageObject);
         jsonObject.add("template", templateObject);
 
+        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Whats App Reminder Sending...");
         restApi.whatsAppSendNotification(baseUrl, jsonObject, HttpMethod.POST, authToken);
+        jobLogRepository.insertLog(name,"REMINDER EMAIL BEFORE END: Survey Whats App Reminder Successfully to"+user.getMobile());
     }
 }
