@@ -5,7 +5,6 @@ import java.util.Properties;
 
 import javax.sql.DataSource;
 
-
 import org.springframework.boot.autoconfigure.quartz.QuartzProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -23,9 +22,9 @@ public class QuartzConfig {
     private DataSource dataSource;
     private QuartzProperties quartzProperties;
 
-    //  private static final String EVERY_MINUTE = "59 * * ? * * *";
+    // private static final String EVERY_MINUTE = "59 * * ? * * *";
 
-    private static final String EVERY_DAY_MIDNIGHT = "0 0 0 * * ?";
+    private static final String EVERY_DAY_MIDNIGHT = "0 0 2 * * ?";
     private static final String EVERY_MONTH_FIRST_DAY_MIDNIGHT = "0 0 0 1 * ? *";
 
     public QuartzConfig(ApplicationContext applicationContext, DataSource dataSource,
@@ -48,7 +47,8 @@ public class QuartzConfig {
         schedulerFactoryBean.setAutoStartup(false);
         schedulerFactoryBean.setJobFactory(jobFactory);
         schedulerFactoryBean.setDataSource(dataSource);
-        schedulerFactoryBean.setTriggers(reminderBeforeStartTrigger().getObject(), reminderBeforeEndTrigger().getObject());
+        schedulerFactoryBean.setTriggers(reminderBeforeStartTrigger().getObject(),
+                reminderBeforeEndTrigger().getObject());
         try {
             schedulerFactoryBean.afterPropertiesSet();
         } catch (Exception e) {
@@ -78,6 +78,7 @@ public class QuartzConfig {
         return detailFactoryBean;
 
     }
+
     @Bean
     public CronTriggerFactoryBean reminderBeforeEndTrigger() {
         CronTriggerFactoryBean factoryBean = new CronTriggerFactoryBean();
